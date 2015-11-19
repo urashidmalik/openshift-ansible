@@ -1,5 +1,8 @@
 #!/bin/bash
 
+MASTER_SSH=vagrant@ose3-master.example.com
+REGISTRY_SETUP="sudo oadm policy add-role-to-user system:registry reguser;sudo oadm registry --create=true   --service-account=registry --credentials=/etc/origin/master/openshift-registry.kubeconfig --mount-host=/var/lib/openshift/docker-registry"
+
 magenta=`tput setaf 5; tput bold;`
 echo "${magenta}Starting Openshift Origin Cluster                 ..."
 
@@ -11,7 +14,7 @@ if [ $? != 0 ]; then
   vagrant plugin install vagrant-hostmanager
 fi
 
-
+  
 if [ ! -f /usr/local/bin/oc ];then
 
   echo "Get OC tools for Management                                 ..."
@@ -25,61 +28,22 @@ if [ ! -f /usr/local/bin/oc ];then
 
 fi
 
-echo "Starting Master and Minions                                   ..."
+echo "${magenta}Starting Master and Minions                                   ..."
 vagrant up --provider=virtualbox
 
 echo ""
-echo "Setup login: User: admin, Password: admin                     ..."
-oc login ose3-master.example.com:8443 --insecure-skip-tls-verify=true
+echo "${magenta}Setup login: User: admin, Password: admin                     ..."
+rm -rf ~/.kube/config
 
-echo "Setup reguser for docker regstery                     ..."
-oadm policy add-role-to-user system:registry reguser
+echo ""
+echo "${magenta}Copy Master Config: Make life easier                     ..."
+scp -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null vagrant@ose3-master.example.com:~/.kube/config ~/.kube/config
+#oc login -u admin ose3-master.example.com:8443 --insecure-skip-tls-verify=true
 
-echo "Access Origin : https://ose3-master.example.com:8443/"
+echo ""
+echo "${magenta}Setup reguser for docker regstery                     ..."
+#oadm policy add-role-to-user system:registry reguser
+ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null  -t $MASTER_SSH '$REGISTRY_SETUP'
 
-
-
-
-
-
-
-
-
-#curl https://storage.googleapis.com/kubernetes-release/release/v1.0.6/bin/$(uname | tr '[:upper:]' '[:lower:]'$)/amd64/kubectl -o /usr/local/bin/kubectl
-#chmod +x /usr/local/bin/kubectl
-#sleep 10
-#
-#echo "${magenta}Configureing kubectl to talk to newly created Kubernetes/CoreOS Cluster ..."
-#kubectl config set-cluster vagrant --server=https://172.17.4.101:443 --certificate-authority=${PWD}/ssl/ca.pem
-#kubectl config set-credentials vagrant-admin --certificate-authority=${PWD}/ssl/ca.pem --client-key=${PWD}/ssl/admin-key.pem --client-certificate=${PWD}/ssl/admin.pem --username=vagrnat --password=vagrant --insecure-skip-tls-verify=true
-#kubectl config set-context vagrant --cluster=vagrant --user=vagrant-admin
-#kubectl config use-context vagrant
-#sleep 10
-#
-#echo "${magenta}Cloning Kubernetes Repo ..."
-#cd ../../../
-#if [ ! -d "./kubernetes" ]; then
-#	git clone git@github.com:urashidmalik/kubernetes.git
-#fi
-#cd kubernetes
-#
-#echo "${magenta}Getting kubernetes Dashboard up ..."
-#kubectl create -f cluster/addons/kube-ui/kube-ui-rc.yaml --namespace=kube-system
-#kubectl create -f cluster/addons/kube-ui/kube-ui-svc.yaml --namespace=kube-system
-#sleep 10
-#
-#echo "${magenta}Getting GuestBook Application up ..."
-##kubectl create -f examples/guestbook-go/redis-master-controller.json
-##kubectl create -f examples/guestbook-go/redis-master-service.json
-##
-##kubectl create -f examples/guestbook-go/redis-slave-controller.json
-##kubectl create -f examples/guestbook-go/redis-slave-service.json
-##kubectl create -f examples/guestbook-go/guestbook-controller.json
-##kubectl create -f examples/guestbook-go/guestbook-service.json
-#
-#echo "${magenta}Access Kubernetes Dashboard : 172.17.4.101:8080/ui/"
-#echo "${magenta}Access Guest Book App       : 172.17.4.101:30061"
-#
-#
-##kubectl get rc,svc,po --all-namespaces -o wide
-#
+echo ""
+echo "${magenta}Access Origin : https://ose3-master.example.com:8443/"
